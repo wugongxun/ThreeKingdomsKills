@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns="http://www.w3.org/1999/html">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>游戏房间</title>
+    <!-- axios -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+    <!-- (Vue)开发环境版本，包含了有帮助的命令行警告 -->
+    <script src="../static/vue.js"></script>
+
+    <!-- jQuery (Bootstrap 的所有 JavaScript 插件都依赖 jQuery，所以必须放在前边) -->
+    <script src="../static/jquery-1.9.1/jquery-1.9.1.min.js"></script>
+
+    <!-- Bootstrap core CSS -->
+    <link href="../static/bootstrap-3.4.1-dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <script src="../static/bootstrap-3.4.1-dist/js/bootstrap.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1 th:text="${session.roomId}" id="roomId"></h1>
+        <div class="row">
+            <div class="col-md-10">
+                <h3>当前人数{{ currentMembers }}/{{ maxMembers }}</h3>
+            </div>
+            <div class="col-md-2">
+                <!-- Single button -->
+                <div class="btn-group">
+                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        设置房间人数 <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a @click="changeMaxMembers(5)">5</a></li>
+                        <li><a @click="changeMaxMembers(6)">6</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <button class="btn btn-success btn-block" th:if="${session.playerNumber == 'p1'}" @click="startGame">开启游戏</button>
+        <button class="btn btn-danger btn-block" @click="quitRoom">退出房间</button>
+    </div>
+</body>
+<script>
+    function queryRoomId() {
+        let roomId = $("#roomId").text();
+        return roomId;
+    }
+    let ws = new WebSocket("ws://wugongxun.icu/tkk/waitGame");
+</script>
+<script>
+    var app = new Vue({
+        el: ".container",
+        data: {
+            roomId: null,
+            currentMembers: 0,
+            maxMembers: 0
+        },
+        created: function () {
+            this.roomId = queryRoomId();
+            this.queryRoomInfoById();
+            var that = this;
+            ws.onmessage = function (event) {
+                if (event.data == "flushCurrentMembers") {
+                    that.flushCurrentMembers();
+                } else {
+                    window.location.href = "/tkk/game?gameId=" + event.data;
+                }
+            }
+        },
+        methods: {
+            queryRoomInfoById:function () {
+                var that = this;
+                axios.get("/tkk/queryRoomInfoById/" + this.roomId)
+                    .then(function (response) {
+                        that.currentMembers = response.data.data.currentMembers;
+                        that.maxMembers = response.data.data.maxMembers;
+                    });
+            },
+            quitRoom:function () {
+                var that = this;
+                ws.send("quit");
+                setTimeout(function () {
+                }, 500);
+                axios.get("/tkk/quitRoom/" + this.roomId)
+                    .then(function (response) {
+                        window.location.href = "/tkk"
+                    });
+            },
+            flushCurrentMembers:function () {
+                var that = this;
+                axios.get("/tkk/flushCurrentMembers/" + this.roomId)
+                    .then(function (response) {
+                        that.currentMembers = response.data.data;
+                    });
+            },
+            changeMaxMembers:function (changeValue) {
+                this.maxMembers = changeValue;
+                axios.get("/tkk/changeMaxMembers/" + this.roomId + "/" + changeValue)
+                    .then(function (response) {
+
+                    });
+            },
+            startGame:function () {
+                if (this.currentMembers < this.maxMembers) {
+                    alert("人数未满");
+                    return;
+                }
+                var that = this;
+                axios.get("/tkk/startGame/" + this.roomId)
+                    .then(function (response) {
+                        let gameId = response.data.data;
+                        ws.send(gameId);
+                        window.location.href = "/tkk/game?gameId=" + gameId;
+                    });
+            }
+        }
+    })
+</script>
+</html>

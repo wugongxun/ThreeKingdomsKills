@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns="http://www.w3.org/1999/html">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>游戏开始</title>
+    <!-- axios -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+    <!-- (Vue)开发环境版本，包含了有帮助的命令行警告 -->
+    <script src="../static/vue.js"></script>
+
+    <!-- jQuery (Bootstrap 的所有 JavaScript 插件都依赖 jQuery，所以必须放在前边) -->
+    <script src="../static/jquery-1.9.1/jquery-1.9.1.min.js"></script>
+
+    <!-- Bootstrap core CSS -->
+    <link href="../static/bootstrap-3.4.1-dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <script src="../static/bootstrap-3.4.1-dist/js/bootstrap.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <input type="hidden" th:value="${session.gameId}" id="gameId">
+        <input type="hidden" th:value="${session.roomId}" id="roomId">
+        <input type="hidden" th:value="${session.playerNumber}" id="playerNumber">
+        <div class="row">
+            <button @click="toggleIdentity" class="btn btn-success btn-block">隐藏身份</button>
+        </div>
+        <div class="row">
+            <img :src="'../static/identityPic/' + identityPic" v-show="showIdentity" class="center-block">
+        </div>
+        <div>
+            <button @click="chooseGenerals" class="btn btn-info btn-block" v-if="chooseGeneralsButton">选择武将</button>
+        </div>
+        <div class="row">
+            <img :src="'/home/wgx/generals/' + currentGeneral" v-show="!showIdentity && currentGeneral != null" class="center-block">
+        </div>
+        <div class="row center-block" v-if="generalList.length != 0">
+            <nav aria-label="...">
+                <ul class="pager">
+                    <li class="previous" v-show="index != 0"><a href="#" @click="prevGeneral"><span aria-hidden="true">&larr;</span> 上一个</a></li>
+                    <li class="next" v-show="index != generalList.length - 1" @Click="nextGeneral"><a href="#">下一个 <span aria-hidden="true">&rarr;</span></a></li>
+                </ul>
+            </nav>
+        </div>
+        <div class="row">
+            <button @click="confirmGeneral" v-if="showConfirmButton" class="btn btn-block btn-info">确定</button>
+        </div>
+        <div class="row">
+            <button @click="endGame" th:if="${session.playerNumber == 'p1'}" class="btn btn-block btn-danger">结束游戏</button>
+        </div>
+    </div>
+</body>
+<script>
+    function queryGameId() {
+        let gameId = $("#gameId").val();
+        return gameId;
+    }
+    function queryPlayerNumber() {
+        let playerNumber = $("#playerNumber").val();
+        return playerNumber;
+    }
+    function queryRoomId() {
+        let roomId = $("#roomId").val();
+        return roomId;
+    }
+    let ws = new WebSocket("ws://wugongxun.icu/tkk/waitGameEnd");
+</script>
+<script>
+    var app = new Vue({
+        el: ".container",
+        data: {
+            roomId: null,
+            gameId: null,
+            gameInfo: null,
+            playerNumber: null,
+            identityPic: null,
+            showIdentity: true,
+            showConfirmButton: false,
+            generalList: [],
+            currentGeneral: null,
+            chooseGeneralsButton: true,
+            index: 0
+        },
+        created: function () {
+            this.gameId = queryGameId();
+            this.roomId = queryRoomId();
+            this.playerNumber = queryPlayerNumber();
+            this.queryGameInfoById();
+            var that = this;
+            ws.onmessage = function (event) {
+                if (event.data == "endGame") {
+                    window.location.href = "/tkk/room";
+                }
+            }
+        },
+        methods: {
+            queryGameInfoById:function () {
+                var that = this;
+                axios.get("/tkk/queryGameInfoById/" + this.gameId)
+                    .then(function (response) {
+                        that.gameInfo = response.data.data;
+                        that.queryIdentity();
+                    });
+            },
+            queryIdentity:function () {
+                switch (this.playerNumber) {
+                    case "p1":
+                        this.identityPic = this.gameInfo.p1;
+                        break;
+                    case "p2":
+                        this.identityPic = this.gameInfo.p2;
+                        break;
+                    case "p3":
+                        this.identityPic = this.gameInfo.p3;
+                        break;
+                    case "p4":
+                        this.identityPic = this.gameInfo.p4;
+                        break;
+                    case "p5":
+                        this.identityPic = this.gameInfo.p5;
+                        break;
+                    case "p6":
+                        this.identityPic = this.gameInfo.p6;
+                        break;
+                }
+            },
+            toggleIdentity:function () {
+                this.showIdentity = !this.showIdentity;
+            },
+            chooseGenerals:function () {
+                this.chooseGeneralsButton = false;
+                this.showIdentity = false;
+                this.showConfirmButton = true;
+                var that = this;
+                axios.get("/tkk/queryGenerals")
+                    .then(function (response) {
+                        console.log(response.data.data)
+                        that.generalList = response.data.data;
+                        that.currentGeneral = that.generalList[that.index].generalPic;
+                    });
+            },
+            prevGeneral:function () {
+                this.index = this.index - 1;
+                this.currentGeneral = this.generalList[this.index].generalPic;
+            },
+            nextGeneral:function () {
+                this.index = this.index + 1;
+                this.currentGeneral = this.generalList[this.index].generalPic;
+            },
+            confirmGeneral:function () {
+                this.showConfirmButton = false;
+                this.generalList = [];
+            },
+            endGame:function () {
+                axios.get("/tkk/endGame/" + this.gameId)
+                    .then(function (response) {
+                        ws.send("endGame");
+                    });
+            }
+        }
+    })
+</script>
+</html>

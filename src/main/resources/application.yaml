@@ -1,0 +1,41 @@
+server:
+  port: 8081
+
+spring:
+  #???
+  datasource:
+    url: jdbc:mysql://localhost:3306/three_kingdoms_kills
+    username: root
+    password: wgx
+    driver-class-name: com.mysql.jdbc.Driver
+  #??RESTFul????
+  mvc:
+    hiddenmethod:
+      filter:
+        enabled: true
+  #redis??
+  redis:
+    #??????????localhost
+    host: 47.100.85.66
+    port: 6379
+    password: w1999g1117x
+    connect-timeout: 15000
+    lettuce:
+      pool:
+        max-active: 8
+        max-wait: 15000
+        max-idle: 10
+        min-idle: 0
+
+#??????
+file:
+  storageFolder: /home/wgx/generals/
+
+#mybatis-plus??
+mybatis-plus:
+  configuration:
+    lazy-loading-enabled: true
+    #log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  mapper-locations: classpath:static/mapper/*.xml
+
+generalsNumberCanChoose: 5

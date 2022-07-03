@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>加入房间</title>
+    <!-- axios -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+    <!-- (Vue)开发环境版本，包含了有帮助的命令行警告 -->
+    <script src="../static/vue.js"></script>
+
+    <!-- jQuery (Bootstrap 的所有 JavaScript 插件都依赖 jQuery，所以必须放在前边) -->
+    <link href="../static/jquery-1.9.1/jquery-1.9.1.min.js" rel="script">
+
+    <!-- Bootstrap core CSS -->
+    <link href="../static/bootstrap-3.4.1-dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+      <div class="container">
+          <h1 v-if="roomList.length == 0" class="text-center">暂时没有房间</h1>
+          <h1 v-else class="text-center">请选择房间加入</h1>
+          <table class="table table-condensed" v-show="roomList.length != 0">
+              <thead>
+                <tr>
+                    <td class="text-center">房间号</td>
+                    <td class="text-center">人数</td>
+                    <td class="text-center">状态</td>
+                    <td class="text-center">操作</td>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(item, index) in roomList">
+                    <td class="text-center">{{ item.roomId }}</td>
+                    <td class="text-center">{{ item.currentMembers }}/{{ item.maxMembers }}</td>
+                    <td v-if="item.status == 1" class="text-center">正在准备</td>
+                    <td v-else-if="item.status == 2" class="text-center">正在游戏</td>
+                    <td v-else-if="item.status == 3" class="text-center">已满员</td>
+                    <td class="text-center"><button class="btn btn-success" @click="joinRoom(item.roomId, item.status)">加入</button></td>
+                </tr>
+              </tbody>
+          </table>
+
+          <button class="btn btn-block btn-info" @click="createRoom">创建一个新房间</button>
+
+      </div>
+
+</body>
+<script>
+    var app = new Vue({
+        el: ".container",
+        data: {
+            roomList: []
+        },
+        created(){
+            this.queryAllRooms();
+        },
+        methods: {
+            queryAllRooms:function () {
+                var that = this;
+                axios.get("/tkk/queryAllRooms")
+                    .then(function (response) {
+                        if (response.data.statusCode == 200) {
+                            that.roomList = response.data.data;
+                        }
+                    });
+            },
+            createRoom:function () {
+                axios.get("/tkk/createRoom")
+                    .then(function (response) {
+                        if (response.data.statusCode == 500) {
+                            alert(response.data.message);
+                        } else {
+                            window.location.href = "/tkk/room";
+                        }
+                    });
+            },
+            joinRoom:function (roomId, status) {
+                if (status == 2) {
+                    alert("该房间正在游戏");
+                } else if (status == 3) {
+                    alert("该房间人数已满");
+                } else {
+                    axios.get("/tkk/joinRoom/" + roomId)
+                        .then(function (response) {
+                            if (response.data.statusCode == 500) {
+                                alert(response.data.message);
+                            } else {
+                                window.location.href = "/tkk/room";
+                            }
+                        });
+                }
+            }
+        }
+    })
+</script>
+</html>
